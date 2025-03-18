@@ -4,6 +4,8 @@ from datetime import datetime
 from fastapi import FastAPI
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
+import os
+import sys
 
 app = FastAPI()
 
@@ -18,20 +20,17 @@ app.add_middleware(
 dynamodb = boto3.resource("dynamodb", region_name="us-east-1")
 table_name = "Thoughts"
 
-def create_table():
-    try:
-        table = dynamodb.create_table(
-            TableName=table_name,
-            KeySchema=[{"AttributeName": "id", "KeyType": "HASH"}],
-            AttributeDefinitions=[{"AttributeName": "id", "AttributeType": "S"}],
-            ProvisionedThroughput={"ReadCapacityUnits": 5, "WriteCapacityUnits": 5},
-        )
-        table.wait_until_exists()
-        return table
-    except dynamodb.meta.client.exceptions.ResourceInUseException:
-        return dynamodb.Table(table_name)
+try:
+    thoughts_table = dynamodb.Table(table_name)
+    thoughts_table.table_status  
+    print("Connected to existing table:", table_name)
+except dynamodb.meta.client.exceptions.ResourceNotFoundException:
+    print(f"Error: Table '{table_name}' does not exist.")
+    sys.exit(1)  
+except Exception as e:
+    print(f"Unexpected error: {e}")
+    sys.exit(1)  
 
-thoughts_table = create_table()
 
 class Thought(BaseModel):
     text: str
